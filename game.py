@@ -212,7 +212,7 @@ def main():
                     direction.pop(direction.index('left'))
             # Нажатия на кнопки
         jod.sprite_change()  # Изменение активных фреймов
-        if counter % 10 == 0:  # Скорость анимации спрайтов
+        if counter % 5 == 0:  # Скорость анимации спрайтов
             jod.update()  # Анимация
             counter = 0
         jod.move(direction, blocks)  # Движение
