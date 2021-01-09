@@ -70,10 +70,12 @@ class Entity(AnimatedSprite):
 
         # Списки фреймов
         self.stand_frames = self.frames[:standframes_count]
-        self.move_left_frames = self.frames[standframes_count:
-                                            standframes_count + moving_left_count]
-        self.move_right_frames = self.frames[standframes_count + moving_left_count:
-                                             standframes_count + moving_left_count + moving_right_count]
+        if moving_left_count != 0:
+            self.move_left_frames = self.frames[standframes_count:
+                                                standframes_count + moving_left_count]
+        if moving_right_count != 0:
+            self.move_right_frames = self.frames[standframes_count + moving_left_count:
+                                                 standframes_count + moving_left_count + moving_right_count]
         if jumpframes_count != 0:
             self.jump_frames = self.frames[standframes_count + moving_left_count + moving_right_count:
                                            jumpframes_count + standframes_count + moving_left_count + moving_right_count]
@@ -146,15 +148,16 @@ class Player(Entity):
             self.jump_sound.play()
 
     def sprite_change(self):
-        if self.air_time < 3:
-            if self.dx == 0:
-                self.frame_list = self.stand_frames
-            if self.dx > 0:
-                self.frame_list = self.move_right_frames
-            if self.dx < 0:
-                self.frame_list = self.move_left_frames
-        else:
-            self.frame_list = self.jump_frames
+        self.frame_list = self.stand_frames
+        # if self.air_time < 3:
+        #     if self.dx == 0:
+        #         self.frame_list = self.stand_frames
+        #     if self.dx > 0:
+        #         self.frame_list = self.move_right_frames
+        #     if self.dx < 0:
+        #         self.frame_list = self.move_left_frames
+        # else:
+        #     self.frame_list = self.jump_frames
 
 
 def collide_detect(character, blocks):
@@ -172,8 +175,8 @@ def main():
     pygame.display.set_caption('игра')
     canvas = pygame.display.set_mode(SIZE)
     all_sprites = pygame.sprite.Group()
-    jod = Player(all_sprites, pygame.transform.scale(image_load('characters\\Jodiu.png'), (800, 100)),
-                 8, 1, 630, 300, 2, 2, 2, 2)  # Создание игрока
+    jod = Player(all_sprites, image_load('characters\\Jods.png'),
+                 4, 1, 630, 300, 4, 0, 0, 0)  # Создание игрока
 
     # Нужно заменить на функцию load_level
     blocks = list()
@@ -212,7 +215,7 @@ def main():
                     direction.pop(direction.index('left'))
             # Нажатия на кнопки
         jod.sprite_change()  # Изменение активных фреймов
-        if counter % 5 == 0:  # Скорость анимации спрайтов
+        if counter % 10 == 0:  # Скорость анимации спрайтов
             jod.update()  # Анимация
             counter = 0
         jod.move(direction, blocks)  # Движение
