@@ -57,9 +57,9 @@ class AnimatedSprite(pygame.sprite.Sprite):
 
 class Entity(AnimatedSprite):
     # Инициализация: группа спрайтов, картинка, кол-во по горизонтали, кол-во по вертикали,
-    # позиция x, позиция y, кол-во фреймов: стоячих, движ. влево, движ. вправо, прыгучих
-    def __init__(self, all_sprites, image, columns, rows, pos_x, pos_y, standframes_count,
-                 moving_left_count, moving_right_count, jumpframes_count=0):
+    # позиция x, позиция y, кол-во фреймов: смотрит влево, смотрит вправо, движ. влево, движ. вправо, прыгучих
+    def __init__(self, all_sprites, image, columns, rows, pos_x, pos_y, facing_left_count,
+                 facing_right_count, moving_left_count, moving_right_count, jumpframes_count=0):
         super().__init__(all_sprites, image, columns, rows)
         self.dy = 0
         self.dx = 0
@@ -69,19 +69,24 @@ class Entity(AnimatedSprite):
         self.x_speed = 5
 
         # Списки фреймов
-        self.stand_frames = self.frames[:standframes_count]
+        self.facing_left_frames = self.frames[:facing_left_count]
+        if facing_right_count != 0:
+            self.facing_right_frames = self.frames[facing_left_count:facing_left_count + facing_right_count]
         if moving_left_count != 0:
-            self.move_left_frames = self.frames[standframes_count:
-                                                standframes_count + moving_left_count]
+            self.move_left_frames = self.frames[facing_left_count + facing_right_count:
+                                                facing_left_count + facing_right_count + moving_left_count]
         if moving_right_count != 0:
-            self.move_right_frames = self.frames[standframes_count + moving_left_count:
-                                                 standframes_count + moving_left_count + moving_right_count]
+            self.move_right_frames = self.frames[facing_left_count + facing_right_count + moving_left_count:
+                                                 facing_left_count + facing_right_count + moving_left_count +
+                                                 moving_right_count]
         if jumpframes_count != 0:
-            self.jump_frames = self.frames[standframes_count + moving_left_count + moving_right_count:
-                                           jumpframes_count + standframes_count + moving_left_count + moving_right_count]
+            self.jump_frames = self.frames[facing_left_count + facing_right_count +
+                                           moving_left_count + moving_right_count:
+                                           jumpframes_count + facing_left_count +
+                                           facing_right_count + moving_left_count + moving_right_count]
         # Списки фреймов
 
-        self.frame_list = self.stand_frames  # Активные фреймы
+        self.frame_list = self.facing_right_frames  # Активные фреймы
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.mask.get_rect()
         self.rect.topleft = self.pos  # Начальное положение
@@ -99,20 +104,23 @@ class Block(pygame.sprite.Sprite):
 
 
 class Player(Entity):
-    def __init__(self, all_sprites, image, columns, rows, pos_x, pos_y, standframes_count,
-                 moving_left_count, moving_right_count, jumpframes_count):
-        super().__init__(all_sprites, image, columns, rows, pos_x, pos_y, standframes_count,
-                         moving_left_count, moving_right_count, jumpframes_count)
+    def __init__(self, all_sprites, image, columns, rows, pos_x, pos_y, facing_left_count,
+                 facing_right_count, moving_left_count, moving_right_count, jumpframes_count):
+        super().__init__(all_sprites, image, columns, rows, pos_x, pos_y, facing_left_count,
+                         facing_right_count, moving_left_count, moving_right_count, jumpframes_count)
         self.jump_sound = sound_load('jump.wav')
         self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
+        self.faces = 'right'
         self.air_time = 0
 
     def move(self, direction, blocks):
         self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
         if 'left' in direction:
             self.dx = -1
+            self.faces = 'left'
         if 'right' in direction:
             self.dx = 1
+            self.faces = 'right'
         if ('left' in direction and 'right' in direction) or \
                 ('left' not in direction and 'right' not in direction):
             self.dx = 0
@@ -148,7 +156,11 @@ class Player(Entity):
             self.jump_sound.play()
 
     def sprite_change(self):
-        self.frame_list = self.stand_frames
+        self.frame_list = self.facing_right_frames
+        if self.faces == 'right':
+            self.frame_list = self.facing_right_frames
+        if self.faces == 'left':
+            self.frame_list = self.facing_left_frames
         # if self.air_time < 3:
         #     if self.dx == 0:
         #         self.frame_list = self.stand_frames
@@ -176,7 +188,7 @@ def main():
     canvas = pygame.display.set_mode(SIZE)
     all_sprites = pygame.sprite.Group()
     jod = Player(all_sprites, image_load('characters\\Jods.png'),
-                 4, 1, 630, 300, 4, 0, 0, 0)  # Создание игрока
+                 8, 1, 630, 300, 4, 4, 0, 0, 0)  # Создание игрока
 
     # Нужно заменить на функцию load_level
     blocks = list()
