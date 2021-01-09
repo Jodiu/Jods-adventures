@@ -221,15 +221,15 @@ def main():
 
     # Нужно заменить на функцию load_level
     blocks = list()
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 800, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 720, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 640, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 560, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 480, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 400, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 320, 600))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 600))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 720, 600))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 640, 600))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 560, 600))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 480, 600))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 400, 600))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 600))
     blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 640, 400))
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 320, 520))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 520))
     # Нужно заменить на функцию load_level
 
     clock = pygame.time.Clock()
