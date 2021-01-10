@@ -159,7 +159,9 @@ class Player(Entity):
                 self.rect.top = block.rect.bottom
                 self.collision_sides['top'] = True
                 self.dy = 0
-        # Прыжок от стены
+        if self.air_time == 3:
+            self.cur_frame = 0
+        # Прыжок от стены (странный)
         # if (self.collision_sides['right'] or self.collision_sides['left']) and not self.collision_sides['bottom']:
         #     self.air_time = 0
 
