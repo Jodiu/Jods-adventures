@@ -215,11 +215,14 @@ def main():
     direction = list()
     pygame.init()
     pygame.mixer.init()
+    music = sound_load('music\\menu.wav')
+    music.set_volume(0.3)
+    music.play(-1)
     pygame.display.set_caption('игра')
     canvas = pygame.display.set_mode(SIZE)
     all_sprites = pygame.sprite.Group()
     jod = Player(all_sprites, image_load('characters\\Jods.png'),
-                 14, 1, 630, 300, 4, 4, 1, 1, 2, 2)  # Создание игрока
+                 22, 1, 630, 300, 4, 4, 4, 4, 3, 3)  # Создание игрока
 
     # Нужно заменить на функцию load_level
     blocks = list()
@@ -230,8 +233,9 @@ def main():
     blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 480, 600))
     blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 400, 600))
     blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block.png'), 640, 400))
     blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 520))
+    blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), 672, 400))
+    blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), 640, 400))
     # Нужно заменить на функцию load_level
 
     clock = pygame.time.Clock()
@@ -258,7 +262,7 @@ def main():
                     direction.pop(direction.index('left'))
             # Нажатия на кнопки
         jod.sprite_change()  # Изменение активных фреймов
-        if counter % 10 == 0:  # Скорость анимации спрайтов
+        if counter % 8 == 0:  # Скорость анимации спрайтов
             jod.update()  # Анимация
             counter = 0
         jod.move(direction, blocks)  # Движение
