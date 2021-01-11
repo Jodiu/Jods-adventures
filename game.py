@@ -1,5 +1,6 @@
 import pygame
 import os
+from random import randint
 
 WIDTH = 1280
 HEIGHT = 720
@@ -100,13 +101,18 @@ class Entity(AnimatedSprite):
 
 
 class Block(pygame.sprite.Sprite):
-    def __init__(self, all_sprites, image, pos_x, pos_y):
-        super().__init__(all_sprites)
+    def __init__(self, all_sprites, image, pos_x, pos_y, is_fake=False):
+        if not is_fake:
+            super().__init__(all_sprites)
         self.pos_x = pos_x
         self.pos_y = pos_y
-        self.image = image
-        self.mask = pygame.mask.from_surface(self.image)
-        self.rect = self.mask.get_rect()
+        self.is_fake = is_fake
+        if not is_fake:
+            self.image = image
+            self.mask = pygame.mask.from_surface(self.image)
+            self.rect = self.mask.get_rect()
+        else:
+            self.rect = pygame.Rect(pos_x, pos_y, 64, 64)
         self.rect.topleft = (pos_x, pos_y)
 
 
@@ -137,28 +143,30 @@ class Player(Entity):
         self.rect.x += self.dx * self.x_speed
         collision_list = collide_detect(self, blocks)
         for block in collision_list:
-            if self.dx > 0:
-                self.rect.right = block.rect.left
-                self.collision_sides['right'] = True
-            elif self.dx < 0:
-                self.rect.left = block.rect.right
-                self.collision_sides['left'] = True
+            if not block.is_fake:
+                if self.dx > 0:
+                    self.rect.right = block.rect.left
+                    self.collision_sides['right'] = True
+                elif self.dx < 0:
+                    self.rect.left = block.rect.right
+                    self.collision_sides['left'] = True
         self.rect.y -= 10 * self.dy / 100  # Падение
         if self.dy >= -70:  # Если меньше - перестает ускоряться
             self.dy -= 5  # Ускорение падения
         collision_list = collide_detect(self, blocks)
         self.air_time += 1
         for block in collision_list:
-            if self.dy < 0:
-                self.rect.bottom = block.rect.top
-                self.collision_sides['bottom'] = True
-                self.dy = 0
-                self.air_time = 0
-                self.animation_loop = True
-            elif self.dy > 0:
-                self.rect.top = block.rect.bottom
-                self.collision_sides['top'] = True
-                self.dy = 0
+            if not block.is_fake:
+                if self.dy < 0:
+                    self.rect.bottom = block.rect.top
+                    self.collision_sides['bottom'] = True
+                    self.dy = 0
+                    self.air_time = 0
+                    self.animation_loop = True
+                elif self.dy > 0:
+                    self.rect.top = block.rect.bottom
+                    self.collision_sides['top'] = True
+                    self.dy = 0
         if self.air_time == 3:
             self.cur_frame = 0
         # Прыжок от стены (странный)
@@ -203,6 +211,67 @@ class Player(Entity):
                 self.frame_list = self.jump_frames_left
 
 
+class Enemy(Entity):
+    def __init__(self, all_sprites, image, columns, rows, pos_x, pos_y, facing_left_count,
+                 facing_right_count, moving_left_count, moving_right_count, jumpframes_left_count=0,
+                 jumpframes_right_count=0):
+        super().__init__(all_sprites, image, columns, rows, pos_x, pos_y, facing_left_count,
+                         facing_right_count, moving_left_count, moving_right_count, jumpframes_left_count,
+                         jumpframes_right_count)
+        self.dy = 0
+        self.dx = randint(-1, 1)
+        self.frame_list = self.facing_right_frames
+        self.direction = list()
+        self.direction.append('left')
+        self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
+        self.air_time = 0
+        self.x_speed = 3
+
+    def move(self, blocks):
+        self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
+        if 'left' in self.direction:
+            self.dx = -1
+        if 'right' in self.direction:
+            self.dx = 1
+        self.rect.x += self.dx * self.x_speed
+        collision_list = collide_detect(self, blocks)
+        for block in collision_list:
+            if self.dx > 0:
+                self.rect.right = block.rect.left
+                self.collision_sides['right'] = True
+                self.direction.append('left')
+                self.direction.pop(self.direction.index('right'))
+            elif self.dx < 0:
+                self.rect.left = block.rect.right
+                self.collision_sides['left'] = True
+                self.direction.append('right')
+                self.direction.pop(self.direction.index('left'))
+        self.rect.y -= 10 * self.dy / 100  # Падение
+        if self.dy >= -70:  # Если меньше - перестает ускоряться
+            self.dy -= 5  # Ускорение падения
+        collision_list = collide_detect(self, blocks)
+        self.air_time += 1
+        for block in collision_list:
+            if self.dy < 0:
+                self.rect.bottom = block.rect.top
+                self.collision_sides['bottom'] = True
+                self.dy = 0
+                self.air_time = 0
+
+    def sprite_change(self):
+        if self.air_time < 3:
+            if 'right' in self.direction:
+                if self.dx > 0:
+                    self.frame_list = self.move_right_frames
+                else:
+                    self.frame_list = self.facing_right_frames
+            if 'left' in self.direction:
+                if self.dx < 0:
+                    self.frame_list = self.move_left_frames
+                else:
+                    self.frame_list = self.facing_left_frames
+
+
 def collide_detect(character, blocks):
     collide_list = list()
     for block in blocks:
@@ -223,10 +292,13 @@ def main():
     all_sprites = pygame.sprite.Group()
     jod = Player(all_sprites, image_load('characters\\Jods.png'),
                  22, 1, 630, 300, 4, 4, 4, 4, 3, 3)  # Создание игрока
+    enemy = Enemy(all_sprites, image_load('characters\\test_enemy1.png'),
+                  2, 4, 630, 300, 2, 2, 2, 2, 0, 0)
 
     # Нужно заменить на функцию load_level
     blocks = list()
     blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 600))
+    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 536, True))
     blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 720, 600))
     blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 640, 600))
     blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 560, 600))
@@ -262,10 +334,13 @@ def main():
                     direction.pop(direction.index('left'))
             # Нажатия на кнопки
         jod.sprite_change()  # Изменение активных фреймов
+        enemy.sprite_change()
         if counter % 8 == 0:  # Скорость анимации спрайтов
             jod.update()  # Анимация
+            enemy.update()
             counter = 0
         jod.move(direction, blocks)  # Движение
+        enemy.move(blocks)
 
         canvas.fill((70, 70, 170))
         all_sprites.draw(canvas)  # Отрисовка всех спрайтов
