@@ -31,6 +31,14 @@ def image_load(name, color_key=None):
     return image
 
 
+def level_load(name):
+    full_name = os.path.join('data', 'levels', name)
+    with open(full_name, mode='r') as file:
+        level = file.read()
+        level = level.split('\n')
+    return level
+
+
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, all_sprites, image, columns, rows):
         super().__init__(all_sprites)
@@ -135,7 +143,7 @@ class Player(Entity):
                          facing_right_count, moving_left_count, moving_right_count, jumpframes_left_count,
                          jumpframes_right_count)
         self.jump_sound = sound_load('jump.wav')
-        # self.death_music = sound_load('death.wav')
+        self.death_music = sound_load('music\\death.wav')
         self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
         self.faces = 'right'
         self.air_time = 0
@@ -232,7 +240,7 @@ class Player(Entity):
     def die(self):
         self.is_dead = True
         pygame.mixer.stop()
-        # self.death_music.play(-1)
+        self.death_music.play(-1)
         self.dy = 140
         self.dx = self.dx / 2
 
@@ -314,37 +322,64 @@ def main():
     direction = list()
     pygame.init()
     pygame.mixer.init()
+    all_sprites = pygame.sprite.Group()
     music = sound_load('music\\menu.wav')
     music.set_volume(0.3)
     music.play(-1)
     pygame.display.set_caption('игра')
     canvas = pygame.display.set_mode(SIZE)
-    all_sprites = pygame.sprite.Group()
-    jod = Player(all_sprites, image_load('characters\\Jods.png'),
-                 22, 1, 630, 300, 4, 4, 4, 4, 3, 3)  # Создание игрока
-
-    # Нужно заменить на функцию load_level
     things = list()
     blocks = list()
     enemies = list()
-    enemies.append(Enemy(all_sprites, image_load('characters\\test_enemy1.png'),
-                         2, 4, 630, 500, 2, 2, 2, 2, 0, 0))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 536, True))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 720, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 640, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 560, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 480, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 400, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 600))
-    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 520))
-    blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), 672, 400))
-    blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), 640, 400))
-    blocks.append(Spike(all_sprites, image_load('blocks\\spike1.png'), 608, 400))
+    level = level_load('level0.txt')
+    row_count = 0
+    for row in level:
+        row_count += 1
+        symbol_count = 0
+        for symbol in row:
+            symbol_count += 1
+            if symbol != '#':
+                if symbol == 'J':
+                    jod = Player(all_sprites, image_load('characters\\Jods.png'),
+                                 22, 1, (32 * symbol_count), (32 * row_count - 32), 4, 4, 4, 4, 3, 3)  # Создание игрока
+                if symbol == 'b':
+                    blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), (32 * symbol_count),
+                                        (32 * row_count)))
+                if symbol == 'i':
+                    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), (32 * symbol_count),
+                                        (32 * row_count), is_fake=True))
+                if symbol == 's':
+                    blocks.append(Spike(all_sprites, image_load('blocks\\spike1.png'), (32 * symbol_count),
+                                        (32 * row_count)))
+                if symbol == 'e':
+                    enemies.append(Enemy(all_sprites, image_load('characters\\test_enemy1.png'),
+                                         2, 4, (32 * symbol_count), (32 * row_count), 2, 2, 2, 2, 0, 0))
     for block in blocks:
         things.append(block)
     for enemy in enemies:
         things.append(enemy)
+    # Нужно заменить на функцию load_level
+    # things = list()
+    # blocks = list()
+    # enemies = list()
+    # enemies.append(Enemy(all_sprites, image_load('characters\\test_enemy1.png'),
+    #                      2, 4, 630, 500, 2, 2, 2, 2, 0, 0))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 600))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 536, True))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 720, 600))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 640, 600))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 560, 600))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 480, 600))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 400, 600))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 600))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 520))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), 672, 400))
+    # blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), 640, 400))
+    # blocks.append(Spike(all_sprites, image_load('blocks\\spike1.png'), 608, 400))
+    # for block in blocks:
+    #     things.append(block)
+    # for enemy in enemies:
+    #     things.append(enemy)
     # Нужно заменить на функцию load_level
 
     clock = pygame.time.Clock()
@@ -379,7 +414,6 @@ def main():
                 enemy.update()
             counter = 0
         jod.move(direction, things)  # Движение
-        print(jod.is_dead)
         for enemy in enemies:
             enemy.move(blocks)
 
