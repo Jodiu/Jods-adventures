@@ -243,6 +243,7 @@ class Player(Entity):
         self.death_music.play(-1)
         self.dy = 140
         self.dx = self.dx / 2
+        self.air_time = 5
 
 
 class Enemy(Entity):
