@@ -318,20 +318,12 @@ def collide_detect(character, things):
     return collide_list
 
 
-def main():
-    direction = list()
-    pygame.init()
-    pygame.mixer.init()
-    all_sprites = pygame.sprite.Group()
-    music = sound_load('music\\menu.wav')
-    music.set_volume(0.3)
-    music.play(-1)
-    pygame.display.set_caption('игра')
-    canvas = pygame.display.set_mode(SIZE)
+def make_level(all_sprites, name):
+    jod = None
     things = list()
     blocks = list()
     enemies = list()
-    level = level_load('level0.txt')
+    level = level_load(name)
     row_count = 0
     for row in level:
         row_count += 1
@@ -358,29 +350,21 @@ def main():
         things.append(block)
     for enemy in enemies:
         things.append(enemy)
-    # Нужно заменить на функцию load_level
-    # things = list()
-    # blocks = list()
-    # enemies = list()
-    # enemies.append(Enemy(all_sprites, image_load('characters\\test_enemy1.png'),
-    #                      2, 4, 630, 500, 2, 2, 2, 2, 0, 0))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 600))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 800, 536, True))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 720, 600))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 640, 600))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 560, 600))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 480, 600))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 400, 600))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 600))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), 320, 520))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), 672, 400))
-    # blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), 640, 400))
-    # blocks.append(Spike(all_sprites, image_load('blocks\\spike1.png'), 608, 400))
-    # for block in blocks:
-    #     things.append(block)
-    # for enemy in enemies:
-    #     things.append(enemy)
-    # Нужно заменить на функцию load_level
+    if jod is not None:
+        return jod, enemies, blocks, things
+
+
+def main():
+    direction = list()
+    pygame.init()
+    pygame.mixer.init()
+    all_sprites = pygame.sprite.Group()
+    music = sound_load('music\\menu.wav')
+    music.set_volume(0.3)
+    music.play(-1)
+    pygame.display.set_caption('игра')
+    canvas = pygame.display.set_mode(SIZE)
+    jod, enemies, blocks, things = make_level(all_sprites, 'level0.txt')
 
     clock = pygame.time.Clock()
     counter = 0  # Счетчик для анимации спрайтов
