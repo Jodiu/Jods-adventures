@@ -6,6 +6,8 @@ WIDTH = 1280
 HEIGHT = 720
 SIZE = WIDTH, HEIGHT
 FPS = 60
+LEVEL_LIST = ['level1.txt', 'level2.txt', 'level3.txt', 'level4.txt', 'level5.txt', 'level6.txt']
+CURRENT_LEVEL = 'level1.txt'
 
 
 def sound_load(name):
@@ -195,6 +197,7 @@ class Player(Entity):
             self.rect.y -= 10 * self.dy / 100  # Падение
             self.dy -= 5  # Ускорение падения
             self.rect.x += self.dx * self.x_speed
+            self.air_time += 2
             # Прыжок от стены (странный)
             # if (self.collision_sides['right'] or self.collision_sides['left']) and not self.collision_sides['bottom']:
             #     self.air_time = 0
@@ -319,12 +322,18 @@ def collide_detect(character, things):
     return collide_list
 
 
-def make_level(all_sprites, name):
-    jod = None
-    things = list()
-    blocks = list()
-    enemies = list()
+def level_change(all_sprites, name, jod, things, blocks, enemies):
+    global CURRENT_LEVEL
+    all_sprites.empty()
+    things.clear()
+    blocks.clear()
+    enemies.clear()
+    if LEVEL_LIST.index(name) > LEVEL_LIST.index(CURRENT_LEVEL):
+        jod.rect.y = HEIGHT
+    elif LEVEL_LIST.index(name) > LEVEL_LIST.index(CURRENT_LEVEL):
+        jod.rect.y = 0
     level = level_load(name)
+    CURRENT_LEVEL = name
     row_count = 0
     for row in level:
         row_count += 1
@@ -333,8 +342,7 @@ def make_level(all_sprites, name):
             symbol_count += 1
             if symbol != '#':
                 if symbol == 'J':
-                    jod = Player(all_sprites, image_load('characters\\Jods.png'),
-                                 22, 1, (32 * symbol_count), (32 * row_count - 32), 4, 4, 4, 4, 3, 3)  # Создание игрока
+                    jod.rect.topleft = (32 * symbol_count), (32 * row_count - 32)
                 if symbol == 'b':
                     blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), (32 * symbol_count),
                                         (32 * row_count)))
@@ -351,8 +359,7 @@ def make_level(all_sprites, name):
         things.append(block)
     for enemy in enemies:
         things.append(enemy)
-    if jod is not None:
-        return jod, enemies, blocks, things
+    return enemies, blocks, things
 
 
 def main():
@@ -360,12 +367,15 @@ def main():
     pygame.init()
     pygame.mixer.init()
     all_sprites = pygame.sprite.Group()
+    player_group = pygame.sprite.Group()
     music = sound_load('music\\menu.wav')
     music.set_volume(0.3)
     music.play(-1)
     pygame.display.set_caption('игра')
     canvas = pygame.display.set_mode(SIZE)
-    jod, enemies, blocks, things = make_level(all_sprites, 'level0.txt')
+    jod = Player(player_group, image_load('characters\\Jods.png'),
+                 22, 1, -50, 0, 4, 4, 4, 4, 3, 3)  # Создание игрока
+    enemies, blocks, things = level_change(all_sprites, 'level1.txt', jod, blocks=list(), enemies=list(), things=list())
 
     clock = pygame.time.Clock()
     counter = 0  # Счетчик для анимации спрайтов
@@ -402,7 +412,14 @@ def main():
         for enemy in enemies:
             enemy.move(blocks)
 
+        if jod.rect.y >= HEIGHT:
+            level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod, things, blocks, enemies)
+            jod.rect.y = 0
+        elif jod.rect.y <= 0:
+            level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1], jod, things, blocks, enemies)
+            jod.rect.y = HEIGHT
         canvas.fill((70, 70, 170))
+        player_group.draw(canvas)
         all_sprites.draw(canvas)  # Отрисовка всех спрайтов
         pygame.display.flip()
         clock.tick(FPS)
