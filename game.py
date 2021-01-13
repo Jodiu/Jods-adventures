@@ -324,6 +324,7 @@ def collide_detect(character, things):
 
 def level_change(all_sprites, name, jod, things, blocks, enemies):
     global CURRENT_LEVEL
+    jod_pos = None
     all_sprites.empty()
     things.clear()
     blocks.clear()
@@ -342,7 +343,7 @@ def level_change(all_sprites, name, jod, things, blocks, enemies):
             symbol_count += 1
             if symbol != '#':
                 if symbol == 'J':
-                    jod.rect.topleft = (32 * symbol_count), (32 * row_count - 32)
+                    jod_pos = ((32 * symbol_count), (32 * row_count - 32))
                 if symbol == 'b':
                     blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), (32 * symbol_count),
                                         (32 * row_count)))
@@ -359,7 +360,18 @@ def level_change(all_sprites, name, jod, things, blocks, enemies):
         things.append(block)
     for enemy in enemies:
         things.append(enemy)
-    return enemies, blocks, things
+    if jod_pos is not None:
+        return enemies, blocks, things, jod_pos
+    else:
+        return enemies, blocks, things
+
+
+class DeathScreen(pygame.sprite.Sprite):
+    def __init__(self, all_sprites):
+        super().__init__(all_sprites)
+        self.image = image_load('menu\\death.png')
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (0, 0)
 
 
 def main():
@@ -375,7 +387,9 @@ def main():
     canvas = pygame.display.set_mode(SIZE)
     jod = Player(player_group, image_load('characters\\Jods.png'),
                  22, 1, -50, 0, 4, 4, 4, 4, 3, 3)  # Создание игрока
-    enemies, blocks, things = level_change(all_sprites, 'level1.txt', jod, blocks=list(), enemies=list(), things=list())
+    enemies, blocks, things, jod_pos = level_change(all_sprites, 'level1.txt', jod, blocks=list(),
+                                                    enemies=list(), things=list())
+    jod.rect.topleft = jod_pos
 
     clock = pygame.time.Clock()
     counter = 0  # Счетчик для анимации спрайтов
@@ -413,11 +427,15 @@ def main():
             enemy.move(blocks)
 
         if jod.rect.y >= HEIGHT:
-            level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod, things, blocks, enemies)
-            jod.rect.y = 0
+            if not CURRENT_LEVEL == 'level1.txt':
+                level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod, things, blocks, enemies)
+                jod.rect.y = 0
+            else:
+                DeathScreen(all_sprites)
         elif jod.rect.y <= 0:
-            level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1], jod, things, blocks, enemies)
-            jod.rect.y = HEIGHT
+            if not CURRENT_LEVEL == 'level6.txt':
+                level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1], jod, things, blocks, enemies)
+                jod.rect.y = HEIGHT
         canvas.fill((70, 70, 170))
         player_group.draw(canvas)
         all_sprites.draw(canvas)  # Отрисовка всех спрайтов
