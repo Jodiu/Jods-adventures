@@ -146,6 +146,7 @@ class Player(Entity):
                          jumpframes_right_count)
         self.jump_sound = sound_load('jump.wav')
         self.death_music = sound_load('music\\death.wav')
+        self.fall_sound = sound_load('fall.wav')
         self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
         self.faces = 'right'
         self.air_time = 0
@@ -243,10 +244,11 @@ class Player(Entity):
     def die(self):
         self.is_dead = True
         pygame.mixer.stop()
-        self.death_music.play(-1)
-        self.dy = 140
+        self.fall_sound.set_volume(0.3)
+        self.fall_sound.play(-1)
+        self.dy = 0
         self.dx = self.dx / 2
-        self.air_time = 5
+        self.air_time = 3
 
 
 class Enemy(Entity):
@@ -264,6 +266,8 @@ class Enemy(Entity):
         self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
         self.air_time = 0
         self.x_speed = 3
+        self.rect = self.mask.get_rect()
+        self.rect.bottomleft = (pos_x, pos_y)
 
     def move(self, blocks):
         self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
@@ -318,6 +322,7 @@ def collide_detect(character, things):
                 collide_list.append(thing)
         elif (type(thing) == Spike or type(thing) == Enemy) and type(character) == Player:
             if pygame.sprite.collide_mask(character, thing):
+                character.dy = 0
                 character.die()
     return collide_list
 
@@ -344,18 +349,33 @@ def level_change(all_sprites, name, jod, things, blocks, enemies):
             if symbol != '#':
                 if symbol == 'J':
                     jod_pos = ((32 * symbol_count), (32 * row_count - 32))
-                if symbol == 'b':
-                    blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), (32 * symbol_count),
-                                        (32 * row_count)))
+                if symbol == '1':
+                    blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), (32 * symbol_count - 32),
+                                        (32 * row_count - 32)))
+                if symbol == '2':
+                    blocks.append(Block(all_sprites, image_load('blocks\\block2.png'), (32 * symbol_count - 32),
+                                        (32 * row_count - 32)))
+                if symbol == '3':
+                    blocks.append(Block(all_sprites, image_load('blocks\\block3.png'), (32 * symbol_count - 32),
+                                        (32 * row_count - 32)))
+                if symbol == '4':
+                    blocks.append(Block(all_sprites, image_load('blocks\\block4.png'), (32 * symbol_count - 32),
+                                        (32 * row_count - 32)))
+                if symbol == '5':
+                    blocks.append(Block(all_sprites, image_load('blocks\\block5.png'), (32 * symbol_count - 32),
+                                        (32 * row_count - 32)))
+                if symbol == '6':
+                    blocks.append(Block(all_sprites, image_load('blocks\\block6.png'), (32 * symbol_count - 32),
+                                        (32 * row_count - 32)))
                 if symbol == 'i':
-                    blocks.append(Block(all_sprites, image_load('blocks\\block_.png'), (32 * symbol_count),
-                                        (32 * row_count), is_fake=True))
+                    blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), (32 * symbol_count - 32),
+                                        (32 * row_count - 32), is_fake=True))
                 if symbol == 's':
-                    blocks.append(Spike(all_sprites, image_load('blocks\\spike1.png'), (32 * symbol_count),
+                    blocks.append(Spike(all_sprites, image_load('blocks\\spike.png'), (32 * symbol_count),
                                         (32 * row_count)))
                 if symbol == 'e':
-                    enemies.append(Enemy(all_sprites, image_load('characters\\test_enemy1.png'),
-                                         2, 4, (32 * symbol_count), (32 * row_count), 2, 2, 2, 2, 0, 0))
+                    enemies.append(Enemy(all_sprites, image_load('characters\\enemy.png'),
+                                         2, 3, (32 * symbol_count - 32), (32 * row_count), 1, 1, 2, 2, 0, 0))
     for block in blocks:
         things.append(block)
     for enemy in enemies:
@@ -385,14 +405,14 @@ class Button(pygame.sprite.Sprite):
 def menu_init(special_group):
     menu = Screen(special_group, 'bg.png')
     play_button = Button(special_group, 'play.png', (75, 430))
-    quit_button = Button(special_group, 'play.png', (75, 550))
+    quit_button = Button(special_group, 'quit.png', (85, 550))
     return menu, play_button, quit_button
 
 
 def death_screen(special_group):
-    death = Screen(special_group, 'death.png')
-    replay_button = Button(special_group, 'play.png', (75, 550))
-    quit_button = Button(special_group, 'play.png', (1000, 550))
+    death = Screen(special_group, 'death1.png')
+    replay_button = Button(special_group, 'replay.png', (75, 550))
+    quit_button = Button(special_group, 'quit.png', (987, 550))
     return death, replay_button, quit_button
 
 
@@ -467,14 +487,20 @@ def main():
         for enemy in enemies:
             enemy.move(blocks)
 
-        if jod.rect.y >= HEIGHT:
+        if jod.rect.top >= HEIGHT:
             if not CURRENT_LEVEL == 'level1.txt':
                 level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod, things, blocks, enemies)
                 jod.rect.y = 0
             else:
+                if not jod.is_dead:
+                    jod.die()
+                    jod.dy = 0
                 death, replay_button, quit_death_button = death_screen(special_group)
                 death_running = True
-        elif jod.rect.y <= 0:
+                pygame.mixer.stop()
+                jod.death_music.play(-1)
+
+        elif jod.rect.bottom <= 0:
             if not CURRENT_LEVEL == 'level6.txt':
                 level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1], jod, things, blocks, enemies)
                 jod.rect.y = HEIGHT
@@ -492,6 +518,7 @@ def main():
                                                                         enemies=list(), things=list())
                         jod.rect.topleft = jod_pos
                         jod.is_dead = False
+                        direction = list()
                         pygame.mixer.stop()
                         music = sound_load('music\\menu.wav')
                         music.set_volume(0.3)
@@ -505,9 +532,11 @@ def main():
             special_group.draw(canvas)
             pygame.display.flip()
         canvas.fill((70, 70, 170))
+        # Отрисовка всех спрайтов
         player_group.draw(canvas)
-        all_sprites.draw(canvas)  # Отрисовка всех спрайтов
+        all_sprites.draw(canvas)
         pygame.display.flip()
+        # Отрисовка всех спрайтов
         clock.tick(FPS)
     pygame.quit()
 
