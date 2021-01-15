@@ -147,6 +147,8 @@ class Player(Entity):
         self.jump_sound = sound_load('jump.wav')
         self.death_music = sound_load('music\\death.wav')
         self.fall_sound = sound_load('fall.wav')
+        self.win_music = sound_load('music\\win.wav')
+        self.won = False
         self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
         self.faces = 'right'
         self.air_time = 0
@@ -175,6 +177,8 @@ class Player(Entity):
                     elif self.dx < 0:
                         self.rect.left = block.rect.right
                         self.collision_sides['left'] = True
+                    if type(block) == Flag:
+                        self.won = True
             self.rect.y -= 10 * self.dy / 100  # Падение
             if self.dy >= -70:  # Если меньше - перестает ускоряться
                 self.dy -= 5  # Ускорение падения
@@ -324,6 +328,8 @@ def collide_detect(character, things):
             if pygame.sprite.collide_mask(character, thing):
                 character.dy = 0
                 character.die()
+        elif type(thing) == Flag and type(character) == Player:
+            character.won = True
     return collide_list
 
 
@@ -334,6 +340,7 @@ def level_change(all_sprites, flags, name, jod, things, blocks, enemies):
     things.clear()
     blocks.clear()
     enemies.clear()
+    flags.empty()
     if LEVEL_LIST.index(name) > LEVEL_LIST.index(CURRENT_LEVEL):
         jod.rect.y = HEIGHT
     elif LEVEL_LIST.index(name) > LEVEL_LIST.index(CURRENT_LEVEL):
@@ -377,7 +384,8 @@ def level_change(all_sprites, flags, name, jod, things, blocks, enemies):
                     enemies.append(Enemy(all_sprites, image_load('characters\\enemy.png'),
                                          2, 3, (32 * symbol_count - 32), (32 * row_count), 1, 1, 2, 2, 0, 0))
                 if symbol == 'f':
-                    blocks.append(Flag(flags, image_load('flag.png'), 1, 3, (32 * symbol_count - 32), (32 * row_count - 32)))
+                    blocks.append(Flag(flags, image_load('flag.png'), 1, 3, (32 * symbol_count - 32),
+                                       (32 * row_count - 32)))
     for block in blocks:
         things.append(block)
     for enemy in enemies:
@@ -418,12 +426,19 @@ def death_screen(special_group):
     return death, retry_button, quit_button
 
 
+def win_init(special_group):
+    win = Screen(special_group, 'win.png')
+    quit_button = Button(special_group, 'quit.png', (30, 550))
+    return win, quit_button
+
+
 class Flag(AnimatedSprite):
-    def __init__(self, flag, image, columns, rows, pos_x, pos_y):
+    def __init__(self, flag, image, columns, rows, pos_x, pos_y, is_fake=False):
         super().__init__(flag, image, columns, rows)
         self.image = image_load('flag.png')
         self.rect = self.image.get_rect()
         self.rect.topleft = (pos_x, pos_y)
+        self.is_fake = is_fake
 
 
 def main():
@@ -457,6 +472,7 @@ def main():
     menu_running = True
     running = True
     death_running = False
+    win_running = False
     while running:
         while menu_running:
             for event in pygame.event.get():
@@ -509,7 +525,8 @@ def main():
         if jod.rect.top >= HEIGHT:
             if not CURRENT_LEVEL == 'level1.txt':
 
-                level_change(all_sprites, flags, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod, things, blocks, enemies)
+                level_change(all_sprites, flags, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod,
+                             things, blocks, enemies)
                 jod.rect.y = 0
             else:
                 if not jod.is_dead:
@@ -522,9 +539,13 @@ def main():
 
         elif jod.rect.bottom <= 0:
             if not CURRENT_LEVEL == 'level6.txt':
-                level_change(all_sprites, flags, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1], jod, things, blocks, enemies)
+                level_change(all_sprites, flags, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1],
+                             jod, things, blocks, enemies)
                 jod.rect.y = HEIGHT
-
+        if jod.rect.right > WIDTH:
+            jod.rect.right = WIDTH
+        if jod.rect.left < 0:
+            jod.rect.left = 0
         while death_running:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -534,8 +555,8 @@ def main():
                         all_sprites.empty()
                         jod = Player(player_group, image_load('characters\\Jods.png'),
                                      22, 1, -50, 0, 4, 4, 4, 4, 3, 3)  # Создание игрока
-                        enemies, blocks, things, jod_pos = level_change(all_sprites, flags, 'level1.txt', jod, blocks=list(),
-                                                                        enemies=list(), things=list())
+                        enemies, blocks, things, jod_pos = level_change(all_sprites, flags, 'level1.txt', jod,
+                                                                        blocks=list(), enemies=list(), things=list())
                         jod.rect.topleft = jod_pos
                         jod.is_dead = False
                         direction = list()
@@ -549,6 +570,22 @@ def main():
                 if event.type == pygame.QUIT:
                     death_running = False
                     running = False
+            special_group.draw(canvas)
+            pygame.display.flip()
+        if jod.won:
+            win_running = True
+            win, quit_button = win_init(special_group)
+            pygame.mixer.stop()
+            jod.win_music.play(-1)
+        while win_running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    win_running = False
+                    running = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if quit_button.rect.collidepoint(event.pos[0], event.pos[1]):
+                        win_running = False
+                        running = False
             special_group.draw(canvas)
             pygame.display.flip()
         canvas.fill((70, 70, 170))
