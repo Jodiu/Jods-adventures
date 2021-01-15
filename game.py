@@ -327,7 +327,7 @@ def collide_detect(character, things):
     return collide_list
 
 
-def level_change(all_sprites, name, jod, things, blocks, enemies):
+def level_change(all_sprites, flags, name, jod, things, blocks, enemies):
     global CURRENT_LEVEL
     jod_pos = None
     all_sprites.empty()
@@ -371,11 +371,13 @@ def level_change(all_sprites, name, jod, things, blocks, enemies):
                     blocks.append(Block(all_sprites, image_load('blocks\\block1.png'), (32 * symbol_count - 32),
                                         (32 * row_count - 32), is_fake=True))
                 if symbol == 's':
-                    blocks.append(Spike(all_sprites, image_load('blocks\\spike.png'), (32 * symbol_count),
-                                        (32 * row_count)))
+                    blocks.append(Spike(all_sprites, image_load('blocks\\spike.png'), (32 * symbol_count - 32),
+                                        (32 * row_count - 32)))
                 if symbol == 'e':
                     enemies.append(Enemy(all_sprites, image_load('characters\\enemy.png'),
                                          2, 3, (32 * symbol_count - 32), (32 * row_count), 1, 1, 2, 2, 0, 0))
+                if symbol == 'f':
+                    blocks.append(Flag(flags, image_load('flag.png'), 1, 3, (32 * symbol_count - 32), (32 * row_count - 32)))
     for block in blocks:
         things.append(block)
     for enemy in enemies:
@@ -403,17 +405,25 @@ class Button(pygame.sprite.Sprite):
 
 
 def menu_init(special_group):
-    menu = Screen(special_group, 'bg.png')
+    menu = Screen(special_group, 'menu.png')
     play_button = Button(special_group, 'play.png', (75, 430))
     quit_button = Button(special_group, 'quit.png', (85, 550))
     return menu, play_button, quit_button
 
 
 def death_screen(special_group):
-    death = Screen(special_group, 'death1.png')
-    replay_button = Button(special_group, 'replay.png', (75, 550))
-    quit_button = Button(special_group, 'quit.png', (987, 550))
-    return death, replay_button, quit_button
+    death = Screen(special_group, 'death.png')
+    retry_button = Button(special_group, 'retry.png', (30, 400))
+    quit_button = Button(special_group, 'quit.png', (30, 550))
+    return death, retry_button, quit_button
+
+
+class Flag(AnimatedSprite):
+    def __init__(self, flag, image, columns, rows, pos_x, pos_y):
+        super().__init__(flag, image, columns, rows)
+        self.image = image_load('flag.png')
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (pos_x, pos_y)
 
 
 def main():
@@ -421,22 +431,28 @@ def main():
     pygame.init()
     pygame.mixer.init()
     all_sprites = pygame.sprite.Group()
+    backgrounds = pygame.sprite.Group()
+    background = pygame.sprite.Sprite(backgrounds)
     player_group = pygame.sprite.Group()
     special_group = pygame.sprite.Group()
+    flags = pygame.sprite.Group()
     music = sound_load('music\\menu.wav')
     music.set_volume(0.3)
     music.play(-1)
     pygame.display.set_caption('игра')
     canvas = pygame.display.set_mode(SIZE)
+    background.image = image_load('background.png')
+    background.rect = background.image.get_rect()
+    background.rect.topleft = (0, 0)
     jod = Player(player_group, image_load('characters\\Jods.png'),
                  22, 1, -50, 0, 4, 4, 4, 4, 3, 3)  # Создание игрока
-    enemies, blocks, things, jod_pos = level_change(all_sprites, 'level1.txt', jod, blocks=list(),
+    enemies, blocks, things, jod_pos = level_change(all_sprites, flags, 'level1.txt', jod, blocks=list(),
                                                     enemies=list(), things=list())
     jod.rect.topleft = jod_pos
     clock = pygame.time.Clock()
     counter = 0  # Счетчик для анимации спрайтов
     menu, play_button, quit_button = menu_init(special_group)
-    replay_button = pygame.rect
+    retry_button = pygame.rect
     quit_death_button = pygame.rect
     menu_running = True
     running = True
@@ -482,6 +498,9 @@ def main():
             jod.update()  # Анимация
             for enemy in enemies:
                 enemy.update()
+            for block in blocks:
+                if type(block) == Flag:
+                    block.update()
             counter = 0
         jod.move(direction, things)  # Движение
         for enemy in enemies:
@@ -489,32 +508,33 @@ def main():
 
         if jod.rect.top >= HEIGHT:
             if not CURRENT_LEVEL == 'level1.txt':
-                level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod, things, blocks, enemies)
+
+                level_change(all_sprites, flags, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod, things, blocks, enemies)
                 jod.rect.y = 0
             else:
                 if not jod.is_dead:
                     jod.die()
                     jod.dy = 0
-                death, replay_button, quit_death_button = death_screen(special_group)
+                death, retry_button, quit_death_button = death_screen(special_group)
                 death_running = True
                 pygame.mixer.stop()
                 jod.death_music.play(-1)
 
         elif jod.rect.bottom <= 0:
             if not CURRENT_LEVEL == 'level6.txt':
-                level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1], jod, things, blocks, enemies)
+                level_change(all_sprites, flags, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1], jod, things, blocks, enemies)
                 jod.rect.y = HEIGHT
 
         while death_running:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if replay_button.rect.collidepoint(event.pos[0], event.pos[1]):
+                    if retry_button.rect.collidepoint(event.pos[0], event.pos[1]):
                         death_running = False
                         player_group.empty()
                         all_sprites.empty()
                         jod = Player(player_group, image_load('characters\\Jods.png'),
                                      22, 1, -50, 0, 4, 4, 4, 4, 3, 3)  # Создание игрока
-                        enemies, blocks, things, jod_pos = level_change(all_sprites, 'level1.txt', jod, blocks=list(),
+                        enemies, blocks, things, jod_pos = level_change(all_sprites, flags, 'level1.txt', jod, blocks=list(),
                                                                         enemies=list(), things=list())
                         jod.rect.topleft = jod_pos
                         jod.is_dead = False
@@ -533,8 +553,10 @@ def main():
             pygame.display.flip()
         canvas.fill((70, 70, 170))
         # Отрисовка всех спрайтов
+        backgrounds.draw(canvas)
         player_group.draw(canvas)
         all_sprites.draw(canvas)
+        flags.draw(canvas)
         pygame.display.flip()
         # Отрисовка всех спрайтов
         clock.tick(FPS)
