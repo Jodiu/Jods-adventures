@@ -107,7 +107,7 @@ class Entity(AnimatedSprite):
         self.frame_list = self.facing_right_frames  # Активные фреймы
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.mask.get_rect()
-        self.rect.topleft = self.pos  # Начальное положение
+        self.rect.topleft = self.pos
 
 
 class Block(pygame.sprite.Sprite):
@@ -145,11 +145,8 @@ class Player(Entity):
                          facing_right_count, moving_left_count, moving_right_count, jumpframes_left_count,
                          jumpframes_right_count)
         self.jump_sound = sound_load('jump.wav')
-        self.death_music = sound_load('music\\death.wav')
         self.fall_sound = sound_load('fall.wav')
-        self.win_music = sound_load('music\\win.wav')
         self.won = False
-        self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
         self.faces = 'right'
         self.air_time = 0
         self.animation_loop = True
@@ -157,7 +154,6 @@ class Player(Entity):
 
     def move(self, direction, blocks):
         if not self.is_dead:
-            self.collision_sides = {'left': False, 'right': False, 'top': False, 'bottom': False}
             if 'left' in direction:
                 self.dx = -1
                 self.faces = 'left'
@@ -173,10 +169,8 @@ class Player(Entity):
                 if not block.is_fake:
                     if self.dx > 0:
                         self.rect.right = block.rect.left
-                        self.collision_sides['right'] = True
                     elif self.dx < 0:
                         self.rect.left = block.rect.right
-                        self.collision_sides['left'] = True
                     if type(block) == Flag:
                         self.won = True
             self.rect.y -= 10 * self.dy / 100  # Падение
@@ -188,13 +182,11 @@ class Player(Entity):
                 if not block.is_fake:
                     if self.dy < 0:
                         self.rect.bottom = block.rect.top
-                        self.collision_sides['bottom'] = True
                         self.dy = 0
                         self.air_time = 0
                         self.animation_loop = True
                     elif self.dy > 0:
                         self.rect.top = block.rect.bottom
-                        self.collision_sides['top'] = True
                         self.dy = 0
             if self.air_time == 3:
                 self.cur_frame = 0
@@ -203,9 +195,6 @@ class Player(Entity):
             self.dy -= 5  # Ускорение падения
             self.rect.x += self.dx * self.x_speed
             self.air_time += 2
-            # Прыжок от стены (странный)
-            # if (self.collision_sides['right'] or self.collision_sides['left']) and not self.collision_sides['bottom']:
-            #     self.air_time = 0
 
     def jump(self):
         self.animation_loop = False
@@ -333,14 +322,13 @@ def collide_detect(character, things):
     return collide_list
 
 
-def level_change(all_sprites, flags, name, jod, things, blocks, enemies):
+def level_change(all_sprites, name, jod, things, blocks, enemies):
     global CURRENT_LEVEL
     jod_pos = None
     all_sprites.empty()
     things.clear()
     blocks.clear()
     enemies.clear()
-    flags.empty()
     if LEVEL_LIST.index(name) > LEVEL_LIST.index(CURRENT_LEVEL):
         jod.rect.y = HEIGHT
     elif LEVEL_LIST.index(name) > LEVEL_LIST.index(CURRENT_LEVEL):
@@ -384,7 +372,7 @@ def level_change(all_sprites, flags, name, jod, things, blocks, enemies):
                     enemies.append(Enemy(all_sprites, image_load('characters\\enemy.png'),
                                          2, 3, (32 * symbol_count - 32), (32 * row_count), 1, 1, 2, 2, 0, 0))
                 if symbol == 'f':
-                    blocks.append(Flag(flags, image_load('flag.png'), 1, 3, (32 * symbol_count - 32),
+                    blocks.append(Flag(all_sprites, image_load('flag.png'), 1, 3, (32 * symbol_count - 32),
                                        (32 * row_count - 32)))
     for block in blocks:
         things.append(block)
@@ -433,8 +421,8 @@ def win_init(special_group):
 
 
 class Flag(AnimatedSprite):
-    def __init__(self, flag, image, columns, rows, pos_x, pos_y, is_fake=False):
-        super().__init__(flag, image, columns, rows)
+    def __init__(self, all_sprites, image, columns, rows, pos_x, pos_y, is_fake=False):
+        super().__init__(all_sprites, image, columns, rows)
         self.image = image_load('flag.png')
         self.rect = self.image.get_rect()
         self.rect.topleft = (pos_x, pos_y)
@@ -445,15 +433,16 @@ def main():
     direction = list()
     pygame.init()
     pygame.mixer.init()
-    all_sprites = pygame.sprite.Group()
-    backgrounds = pygame.sprite.Group()
-    background = pygame.sprite.Sprite(backgrounds)
-    player_group = pygame.sprite.Group()
-    special_group = pygame.sprite.Group()
-    flags = pygame.sprite.Group()
+    backgrounds = pygame.sprite.Group()  # Группа фона
+    background = pygame.sprite.Sprite(backgrounds)  # Фон
+    player_group = pygame.sprite.Group()  # Группа игрока
+    special_group = pygame.sprite.Group()  # Группа для меню и экранов
+    all_sprites = pygame.sprite.Group()  # Группа для всего остального(блоки, враги)
     music = sound_load('music\\menu.wav')
     music.set_volume(0.3)
     music.play(-1)
+    death_music = sound_load('music\\death.wav')
+    win_music = sound_load('music\\win.wav')
     pygame.display.set_caption('игра')
     canvas = pygame.display.set_mode(SIZE)
     background.image = image_load('background.png')
@@ -461,7 +450,7 @@ def main():
     background.rect.topleft = (0, 0)
     jod = Player(player_group, image_load('characters\\Jods.png'),
                  22, 1, -50, 0, 4, 4, 4, 4, 3, 3)  # Создание игрока
-    enemies, blocks, things, jod_pos = level_change(all_sprites, flags, 'level1.txt', jod, blocks=list(),
+    enemies, blocks, things, jod_pos = level_change(all_sprites, 'level1.txt', jod, blocks=list(),
                                                     enemies=list(), things=list())
     jod.rect.topleft = jod_pos
     clock = pygame.time.Clock()
@@ -469,12 +458,14 @@ def main():
     menu, play_button, quit_button = menu_init(special_group)
     retry_button = pygame.rect
     quit_death_button = pygame.rect
+
     menu_running = True
     running = True
     death_running = False
     win_running = False
+
     while running:
-        while menu_running:
+        while menu_running:  # Запуск меню
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if play_button.rect.collidepoint(event.pos[0], event.pos[1]):
@@ -507,55 +498,55 @@ def main():
                 if event.key == pygame.K_LEFT:
                     direction.pop(direction.index('left'))
             # Нажатия на кнопки
+
         jod.sprite_change()  # Изменение активных фреймов
         for enemy in enemies:
             enemy.sprite_change()
         if counter % 8 == 0:  # Скорость анимации спрайтов
-            jod.update()  # Анимация
+            jod.update()  # Анимация игрока
             for enemy in enemies:
-                enemy.update()
+                enemy.update()  # Анимация врагов
             for block in blocks:
                 if type(block) == Flag:
-                    block.update()
+                    block.update()  # Анимация флага
             counter = 0
         jod.move(direction, things)  # Движение
         for enemy in enemies:
-            enemy.move(blocks)
+            enemy.move(blocks)  # Движение врагов
 
-        if jod.rect.top >= HEIGHT:
+        if jod.rect.top >= HEIGHT:  # Если выходит за границу снизу
             if not CURRENT_LEVEL == 'level1.txt':
-
-                level_change(all_sprites, flags, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod,
-                             things, blocks, enemies)
-                jod.rect.y = 0
-            else:
+                level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) - 1], jod,
+                             things, blocks, enemies)  # Смена уровня
+                jod.rect.y = 0  # Перенос игрока вверх
+            else:  # Если уровень 1
                 if not jod.is_dead:
                     jod.die()
                     jod.dy = 0
                 death, retry_button, quit_death_button = death_screen(special_group)
                 death_running = True
                 pygame.mixer.stop()
-                jod.death_music.play(-1)
+                death_music.play(-1)
 
-        elif jod.rect.bottom <= 0:
+        elif jod.rect.bottom <= 0:  # Если выходит за границу сверху
             if not CURRENT_LEVEL == 'level6.txt':
-                level_change(all_sprites, flags, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1],
-                             jod, things, blocks, enemies)
-                jod.rect.y = HEIGHT
-        if jod.rect.right > WIDTH:
+                level_change(all_sprites, LEVEL_LIST[LEVEL_LIST.index(CURRENT_LEVEL) + 1],
+                             jod, things, blocks, enemies)  # Смена уровня
+                jod.rect.y = HEIGHT  # Перенос игрока вниз
+        if jod.rect.right > WIDTH:  # Если выходит за экран справа
             jod.rect.right = WIDTH
-        if jod.rect.left < 0:
+        if jod.rect.left < 0:  # Если выходит за экран слева
             jod.rect.left = 0
-        while death_running:
+        while death_running:  # Если умер
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if retry_button.rect.collidepoint(event.pos[0], event.pos[1]):
+                    if retry_button.rect.collidepoint(event.pos[0], event.pos[1]):  # при нажатии на Retry
                         death_running = False
                         player_group.empty()
                         all_sprites.empty()
                         jod = Player(player_group, image_load('characters\\Jods.png'),
                                      22, 1, -50, 0, 4, 4, 4, 4, 3, 3)  # Создание игрока
-                        enemies, blocks, things, jod_pos = level_change(all_sprites, flags, 'level1.txt', jod,
+                        enemies, blocks, things, jod_pos = level_change(all_sprites, 'level1.txt', jod,
                                                                         blocks=list(), enemies=list(), things=list())
                         jod.rect.topleft = jod_pos
                         jod.is_dead = False
@@ -572,12 +563,12 @@ def main():
                     running = False
             special_group.draw(canvas)
             pygame.display.flip()
-        if jod.won:
+        if jod.won:  # Если победил
             win_running = True
             win, quit_button = win_init(special_group)
             pygame.mixer.stop()
-            jod.win_music.play(-1)
-        while win_running:
+            win_music.play(-1)
+        while win_running:  # Экран победы
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     win_running = False
@@ -593,7 +584,6 @@ def main():
         backgrounds.draw(canvas)
         player_group.draw(canvas)
         all_sprites.draw(canvas)
-        flags.draw(canvas)
         pygame.display.flip()
         # Отрисовка всех спрайтов
         clock.tick(FPS)
