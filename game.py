@@ -374,6 +374,9 @@ def level_change(all_sprites, name, jod, things, blocks, enemies):
                 if symbol == 'f':
                     blocks.append(Flag(all_sprites, image_load('flag.png'), 1, 3, (32 * symbol_count - 32),
                                        (32 * row_count - 32)))
+                if symbol == 'r':
+                    things.append(Instruction(all_sprites, (32 * symbol_count - 32),
+                                              (32 * row_count - 32)))
     for block in blocks:
         things.append(block)
     for enemy in enemies:
@@ -426,6 +429,15 @@ class Flag(AnimatedSprite):
         self.image = image_load('flag.png')
         self.rect = self.image.get_rect()
         self.rect.topleft = (pos_x, pos_y)
+        self.is_fake = is_fake
+
+
+class Instruction(pygame.sprite.Sprite):
+    def __init__(self, all_sprites, pos_x, pos_y, is_fake=True):
+        super().__init__(all_sprites)
+        self.image = image_load('info.png')
+        self.rect = self.image.get_rect()
+        self.rect.bottomleft = (pos_x, pos_y)
         self.is_fake = is_fake
 
 
